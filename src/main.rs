@@ -3,7 +3,7 @@ mod player;
 use bevy::{post_process::bloom::Bloom, prelude::*};
 //use components::Player;
 use player::{
-    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown,
+    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation,
     accumulate_input, advance_player_physics, interpolate_rendered_transform
 };
 
@@ -77,7 +77,6 @@ fn setup_player(
         Velocity::default(),
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
-        DashCooldown(Timer::from_seconds(2.0, TimerMode::Once)),
         Mesh2d(meshes.add(Circle::new(10.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),
