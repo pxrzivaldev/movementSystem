@@ -1,6 +1,10 @@
 use bevy::prelude::*;
+use crate::{CursorRelCamPos, get_rel_cursorpos};
 
 const PLAYER_SPEED: f32 = 220.;
+const DASH_CD: f32 = 2.;
+const DASH_LENGTH: f32 = 500.;
+const DASH_DURATION: f32 = 0.2;
 
 #[derive(Component)]
 pub struct Player;
@@ -18,6 +22,21 @@ pub struct PhysicalTranslation(pub Vec2);
 
 #[derive(Debug, Component, Clone, Copy, PartialEq, Default, Deref, DerefMut)]
 pub struct PreviousPhysicalTranslation(pub Vec2);
+
+#[derive(Component)]
+struct DashCooldown(Timer);
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+struct ActiveCooldown;
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+struct ActiveDashDodge;
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+struct DashTimer(Timer);
 
 pub fn accumulate_input(
     kb_input: Res<ButtonInput<KeyCode>>,

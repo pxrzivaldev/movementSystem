@@ -10,14 +10,18 @@ use player::{
 // How quickly should the camera snap to the desired location.
 const CAMERA_DECAY_RATE: f32 = 5.;
 
+#[derive(Resource, Default)]
+pub struct CursorWorldPos(pub Vec2);
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<DidFixedTimestepRunThisFrame>()
+        .init_resource::<CursorWorldPos>()
         .add_systems(Startup, (setup_scene, setup_camera, setup_player))
         .add_systems(PreUpdate, clear_fixed_timestep_flag)
-        .add_systems(Update, follow_mouse)
-        .add_systems(FixedPreUpdate, set_fixed_time_step_flag)
+        .add_systems(Update, get_cursorpos)
+        .add_systems(FixedPreUpdate, (set_fixed_time_step_flag, get_rel_cursorpos))
         .add_systems(FixedUpdate, advance_player_physics)
         .add_systems(
             RunFixedMainLoop,
@@ -78,6 +82,7 @@ fn setup_player(
         Velocity::default(),
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
+        CursorRelCamPos(Vec2::ZERO),
         Mesh2d(meshes.add(Circle::new(10.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),
@@ -131,34 +136,40 @@ fn update_camera(
         .smooth_nudge(&direction, CAMERA_DECAY_RATE, time.delta_secs());
 }
 
+#[derive(Component)]
+pub struct CursorRelCamPos(pub Vec2);
+
 // Getting mouse inputs relative to world
-fn get_world_cursorpos(
+fn get_cursorpos(
     windows: Query<&Window>,
     camera_q: Single<&Transform, With<Camera2d>>,
-) -> Option<Vec2> {
-    let window = windows.single().ok()?;
+    mut cursor_res: ResMut<CursorWorldPos>,
+) {
+    // Use .single() and handle the Result
+    let window = match windows.single() {
+        Ok(w) => w,
+        Err(_) => return, // early return if no window found
+    };
+
     let camera_transform = camera_q.into_inner();
 
-    let cursor_pos = window.cursor_position()?;
-    let window_size = Vec2::new(window.width(), window.height());
+    if let Some(cursor_pos) = window.cursor_position() {
+        let window_size = Vec2::new(window.width(), window.height());
+        let cursor_ndc = (cursor_pos / window_size) * 2.0 - Vec2::ONE;
+        let world_offset = cursor_ndc * 0.5 * window_size * Vec2::new(1.0, -1.0);
 
-    // Normalized device coordinates (-1 to 1)
-    let cursor_ndc = (cursor_pos / window_size) * 2.0 - Vec2::ONE;
-
-    // Convert NDC to world-space offset (centered)
-    let world_offset = cursor_ndc * 0.5 * window_size * Vec2::new(1.0, -1.0);
-
-    // Position relative to camera center
-    Some(camera_transform.translation.truncate() + world_offset)
+        cursor_res.0 = camera_transform.translation.truncate() + world_offset;
+    }
 }
 
-fn follow_mouse(
-    mut gizmos: Gizmos, // built-in Bevy debug renderer
-    windows: Query<&Window>,
+fn get_rel_cursorpos(
+    cursor_res: Res<CursorWorldPos>,
+    cursor_rel: Single<&mut CursorRelCamPos>,
     camera_q: Single<&Transform, With<Camera2d>>,
-) {
-    if let Some(mouse_world) = get_world_cursorpos(windows, camera_q) {
-        // Draw a small white circle at the mouse position
-        gizmos.circle_2d(mouse_world, 5.0, Color::WHITE);
-    }
+){
+    let camera_transform = camera_q.into_inner();
+    let mut rel = cursor_rel.into_inner();
+
+    // Relative vector from camera to cursor
+    rel.0 = cursor_res.0 - camera_transform.translation.truncate();
 }
