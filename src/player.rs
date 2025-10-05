@@ -35,7 +35,7 @@ pub fn accumulate_input(
     }
 }
 
-pub fn advance_physics(
+pub fn advance_player_physics(
     fixed_time: Res<Time>,
     mut query: Query<(&mut PhysicalTranslation, &mut PreviousPhysicalTranslation, &Velocity), With<Player>>,
 ) {
