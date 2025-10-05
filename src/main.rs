@@ -3,8 +3,8 @@ mod player;
 use bevy::{post_process::bloom::Bloom, prelude::*};
 //use components::Player;
 use player::{
-    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation,
-    accumulate_input, advance_physics, interpolate_rendered_transform
+    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown,
+    accumulate_input, advance_player_physics, interpolate_rendered_transform
 };
 
 // How quickly should the camera snap to the desired location.
@@ -14,10 +14,10 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<DidFixedTimestepRunThisFrame>()
-        .add_systems(Startup, (setup_scene, setup_camera))
+        .add_systems(Startup, (setup_scene, setup_camera, setup_player))
         .add_systems(PreUpdate, clear_fixed_timestep_flag)
         .add_systems(FixedPreUpdate, set_fixed_time_step_flag)
-        .add_systems(FixedUpdate, advance_physics)
+        .add_systems(FixedUpdate, advance_player_physics)
         .add_systems(
             RunFixedMainLoop,
             (
@@ -64,14 +64,20 @@ fn setup_scene(
             Transform::from_xyz(0.0, y as f32 * cell_size - (grid_height as f32 * cell_size) / 2.0, 0.0),
         ));
     }
+}
 
-    // Player
+fn setup_player(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+){
     commands.spawn((
         Player,
         AccumulatedInput::default(),
         Velocity::default(),
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
+        DashCooldown(Timer::from_seconds(2.0, TimerMode::Once)),
         Mesh2d(meshes.add(Circle::new(10.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),
