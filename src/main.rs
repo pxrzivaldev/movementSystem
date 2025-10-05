@@ -1,6 +1,6 @@
 mod player;
 
-use bevy::{post_process::bloom::Bloom, prelude::*};
+use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 //use components::Player;
 use player::{
     Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation,
@@ -16,6 +16,7 @@ fn main() {
         .init_resource::<DidFixedTimestepRunThisFrame>()
         .add_systems(Startup, (setup_scene, setup_camera, setup_player))
         .add_systems(PreUpdate, clear_fixed_timestep_flag)
+        .add_systems(Update, follow_mouse)
         .add_systems(FixedPreUpdate, set_fixed_time_step_flag)
         .add_systems(FixedUpdate, advance_player_physics)
         .add_systems(
@@ -114,9 +115,7 @@ fn clear_input(mut input: Single<&mut AccumulatedInput>) {
     **input = AccumulatedInput::default();
 }
 
-
-
-/// Update the camera position by tracking the player.
+// Update the camera position by tracking the player.
 fn update_camera(
     mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
     player: Single<&Transform, (With<Player>, Without<Camera2d>)>,
@@ -130,4 +129,36 @@ fn update_camera(
     camera
         .translation
         .smooth_nudge(&direction, CAMERA_DECAY_RATE, time.delta_secs());
+}
+
+// Getting mouse inputs relative to world
+fn get_world_cursorpos(
+    windows: Query<&Window>,
+    camera_q: Single<&Transform, With<Camera2d>>,
+) -> Option<Vec2> {
+    let window = windows.single().ok()?;
+    let camera_transform = camera_q.into_inner();
+
+    let cursor_pos = window.cursor_position()?;
+    let window_size = Vec2::new(window.width(), window.height());
+
+    // Normalized device coordinates (-1 to 1)
+    let cursor_ndc = (cursor_pos / window_size) * 2.0 - Vec2::ONE;
+
+    // Convert NDC to world-space offset (centered)
+    let world_offset = cursor_ndc * 0.5 * window_size * Vec2::new(1.0, -1.0);
+
+    // Position relative to camera center
+    Some(camera_transform.translation.truncate() + world_offset)
+}
+
+fn follow_mouse(
+    mut gizmos: Gizmos, // built-in Bevy debug renderer
+    windows: Query<&Window>,
+    camera_q: Single<&Transform, With<Camera2d>>,
+) {
+    if let Some(mouse_world) = get_world_cursorpos(windows, camera_q) {
+        // Draw a small white circle at the mouse position
+        gizmos.circle_2d(mouse_world, 5.0, Color::WHITE);
+    }
 }
