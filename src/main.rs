@@ -1,9 +1,9 @@
 mod player;
 
-use bevy::{post_process::bloom::Bloom, prelude::*};
+use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 //use components::Player;
 use player::{
-    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown,
+    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation,
     accumulate_input, advance_player_physics, interpolate_rendered_transform
 };
 
@@ -77,7 +77,6 @@ fn setup_player(
         Velocity::default(),
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
-        DashCooldown(Timer::from_seconds(2.0, TimerMode::Once)),
         Mesh2d(meshes.add(Circle::new(10.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),
@@ -115,9 +114,7 @@ fn clear_input(mut input: Single<&mut AccumulatedInput>) {
     **input = AccumulatedInput::default();
 }
 
-
-
-/// Update the camera position by tracking the player.
+// Update the camera position by tracking the player.
 fn update_camera(
     mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
     player: Single<&Transform, (With<Player>, Without<Camera2d>)>,
@@ -131,4 +128,26 @@ fn update_camera(
     camera
         .translation
         .smooth_nudge(&direction, CAMERA_DECAY_RATE, time.delta_secs());
+}
+
+// Getting mouse inputs relative to world
+fn my_cursor_system(
+    windows: Query<&Window>,
+    camera_q: Single<&Transform, With<Camera2d>>,
+) -> Option<Vec2> {
+    let window = windows.get_single().ok()?;
+    let camera_transform = camera_q.into_inner();
+
+    let cursor_pos = window.cursor_position()?;
+
+    // Convert screen coordinates to normalized device coordinates
+    let ndc = Vec2::new(
+        (cursor_pos.x / window.width()) * 2.0 - 1.0,
+        (cursor_pos.y / window.height()) * 2.0 - 1.0,
+    );
+
+    // Convert NDC to world coordinates
+    let world_pos = camera_transform.translation.truncate() + ndc;
+
+    Some(world_pos)
 }
