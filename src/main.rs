@@ -4,7 +4,7 @@ use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 //use components::Player;
 use player::{
     Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown, DASH_CD,
-    accumulate_input, advance_player_physics, interpolate_rendered_transform, update_dash_timer, update_dash_cooldown,
+    handle_movement_input, handle_dash_input, apply_dash_velocity, advance_player_physics, interpolate_rendered_transform, update_dash_timer, update_dash_cooldown,
 };
 // How quickly should the camera snap to the desired location.
 const CAMERA_DECAY_RATE: f32 = 5.;
@@ -26,8 +26,11 @@ fn main() {
             RunFixedMainLoop,
             (
                 (
-                    accumulate_input,
+                    handle_movement_input,
+                    handle_dash_input,
+                    apply_dash_velocity,
                 )
+                    .chain()
                     .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
                 (
                     clear_input.run_if(did_fixed_timestep_run_this_frame),
