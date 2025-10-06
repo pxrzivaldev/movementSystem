@@ -3,10 +3,9 @@ mod player;
 use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 //use components::Player;
 use player::{
-    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation,
-    accumulate_input, advance_player_physics, interpolate_rendered_transform
+    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown, DASH_CD,
+    accumulate_input, advance_player_physics, interpolate_rendered_transform, update_dash_timer, update_dash_cooldown,
 };
-
 // How quickly should the camera snap to the desired location.
 const CAMERA_DECAY_RATE: f32 = 5.;
 
@@ -22,7 +21,7 @@ fn main() {
         .add_systems(PreUpdate, clear_fixed_timestep_flag)
         .add_systems(Update, get_cursorpos)
         .add_systems(FixedPreUpdate, (set_fixed_time_step_flag, get_rel_cursorpos))
-        .add_systems(FixedUpdate, advance_player_physics)
+        .add_systems(FixedUpdate, (advance_player_physics, update_dash_timer, update_dash_cooldown))
         .add_systems(
             RunFixedMainLoop,
             (
@@ -83,6 +82,7 @@ fn setup_player(
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
         CursorRelCamPos(Vec2::ZERO),
+        DashCooldown(Timer::from_seconds(DASH_CD, TimerMode::Once)),
         Mesh2d(meshes.add(Circle::new(10.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),

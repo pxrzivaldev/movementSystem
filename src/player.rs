@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use crate::{CursorRelCamPos, get_rel_cursorpos};
+use crate::CursorRelCamPos;
 
 const PLAYER_SPEED: f32 = 220.;
-const DASH_CD: f32 = 2.;
+pub const DASH_CD: f32 = 2.;
 const DASH_LENGTH: f32 = 500.;
 const DASH_DURATION: f32 = 0.2;
 
@@ -24,33 +24,79 @@ pub struct PhysicalTranslation(pub Vec2);
 pub struct PreviousPhysicalTranslation(pub Vec2);
 
 #[derive(Component)]
-struct DashCooldown(Timer);
+pub struct DashCooldown(pub Timer);
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-struct ActiveCooldown;
+pub struct ActiveCooldown;
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-struct ActiveDashDodge;
-
-#[derive(Component)]
-#[component(storage = "SparseSet")]
-struct DashTimer(Timer);
+pub struct ActiveDash(Timer, Vec2);
 
 pub fn accumulate_input(
+    mut commands: Commands,
     kb_input: Res<ButtonInput<KeyCode>>,
-    mut player: Query<(&mut AccumulatedInput, &mut Velocity), With<Player>>,
+    mut player: Query<(
+        Entity,
+        &mut AccumulatedInput,
+        &mut Velocity,
+        &mut DashCooldown,
+        &CursorRelCamPos,
+        Option<&ActiveCooldown>,
+        Option<&ActiveDash>
+    ), With<Player>>,
 ) {
-    for (mut input, mut velocity) in &mut player {
+    for (entity, mut input, mut velocity, mut dash_cd, cursor_rel, on_cooldown, d_timer) in &mut player {
         input.movement = Vec2::ZERO;
-
         if kb_input.pressed(KeyCode::KeyW) { input.movement.y += 1.0; }
         if kb_input.pressed(KeyCode::KeyS) { input.movement.y -= 1.0; }
         if kb_input.pressed(KeyCode::KeyA) { input.movement.x -= 1.0; }
         if kb_input.pressed(KeyCode::KeyD) { input.movement.x += 1.0; }
+        if d_timer.is_none() {
+            if kb_input.pressed(KeyCode::Space) {
+                if on_cooldown.is_none() {
+                    
+                    let mut dash_vector = cursor_rel.0; // Cursor relative to player
+                    let distance = dash_vector.length();
+                    if distance > DASH_LENGTH {
+                        dash_vector = dash_vector.normalize() * DASH_LENGTH;
+                    }
+                    commands.entity(entity).insert(ActiveCooldown);
+                    commands.entity(entity).insert(ActiveDash(Timer::from_seconds(DASH_DURATION, TimerMode::Once),dash_vector));
+                    dash_cd.0.reset();
+                }
+            }
+            velocity.0 = input.movement.normalize_or_zero() * PLAYER_SPEED;
+            return;
+        } else {
+            if let Some(active_dash) = d_timer {
+                velocity.0 = active_dash.1 / DASH_DURATION; // constant velocity
+            }
+        }
+    }
+}
 
-        velocity.0 = input.movement.normalize_or_zero() * PLAYER_SPEED;
+pub fn update_dash_timer(
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut ActiveDash), With<Player>>,
+    mut commands: Commands,
+) {
+    for (entity, mut dash) in &mut query {
+        dash.0.tick(time.delta());
+        if dash.0.is_finished() {
+            commands.entity(entity).remove::<ActiveDash>();
+            commands.entity(entity).remove::<ActiveCooldown>();
+        }
+    }
+}
+
+pub fn update_dash_cooldown(
+    time: Res<Time>,
+    mut query: Query<&mut DashCooldown>
+){
+    for mut cooldown in &mut query {
+        cooldown.0.tick(time.delta());
     }
 }
 
