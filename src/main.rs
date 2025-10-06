@@ -52,7 +52,7 @@ fn setup_scene(
     // Grid background (e.g., 20x20 cells)
     let grid_width = 20;
     let grid_height = 20;
-    let cell_size = 50.0;
+    let cell_size = 100.0;
 
     let line_material = materials.add(Color::srgb(0.3, 0.3, 0.3));
 
@@ -86,7 +86,7 @@ fn setup_player(
         PreviousPhysicalTranslation(Vec2::ZERO),
         CursorRelCamPos(Vec2::ZERO),
         DashCooldown(Timer::from_seconds(DASH_CD, TimerMode::Once)),
-        Mesh2d(meshes.add(Circle::new(10.))),
+        Mesh2d(meshes.add(Circle::new(15.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
         Transform::from_xyz(0., 0., 2.),
     ));

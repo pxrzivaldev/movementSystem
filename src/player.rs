@@ -1,9 +1,8 @@
 use bevy::prelude::*;
-use crate::CursorRelCamPos;
 
-const PLAYER_SPEED: f32 = 220.;
+const PLAYER_SPEED: f32 = 370.;
 pub const DASH_CD: f32 = 2.;
-const DASH_LENGTH: f32 = 500.;
+const DASH_LENGTH: f32 = 800.;
 const DASH_DURATION: f32 = 0.2;
 
 #[derive(Component)]
@@ -28,7 +27,7 @@ pub struct DashCooldown(pub Timer);
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct ActiveCooldown;
+pub struct HasDashCooldown;
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
@@ -55,22 +54,24 @@ pub fn handle_dash_input(
     mut query: Query<(
         Entity,
         &mut DashCooldown,
-        &CursorRelCamPos
-    ), (With<Player>,Without<ActiveCooldown>)>,
+        &Velocity,
+        Option<&ActiveDash>
+    ), With<Player>>,
 ) {
-    for (entity, mut dash_cd, cursor_rel,) in &mut query {
-        // Only start dash if not already dashing
-        if kb_input.pressed(KeyCode::Space) {
-            let mut dash_vector = cursor_rel.0;
-            if dash_vector.length() > DASH_LENGTH {
-                dash_vector = dash_vector.normalize() * DASH_LENGTH;
-            }
+    for (entity, mut dash_cd, velocity, active_dash_opt) in &mut query {
+        // Only dash if cooldown finished AND no active dash
+        if kb_input.just_pressed(KeyCode::Space) 
+           && dash_cd.0.is_finished()
+           && active_dash_opt.is_none()
+        {
+            let mut dash_vector = velocity.0;
+            dash_vector = dash_vector.normalize() * DASH_LENGTH;
 
-            commands.entity(entity).insert(ActiveCooldown);
             commands.entity(entity).insert(ActiveDash(
                 Timer::from_seconds(DASH_DURATION, TimerMode::Once),
                 dash_vector,
             ));
+
             dash_cd.0.reset();
         }
     }
@@ -78,7 +79,7 @@ pub fn handle_dash_input(
 
 pub fn apply_dash_velocity(
     time: Res<Time>,
-    mut query: Query<(&mut Velocity, &mut ActiveDash), With<Player>>,
+    mut query: Query<(&mut Velocity, &mut ActiveDash), (With<Player>, With<ActiveDash>)>,
 ) {
     for (mut velocity, mut active_dash) in &mut query {
         // Update timer
@@ -99,7 +100,7 @@ pub fn update_dash_timer(
         dash.0.tick(time.delta());
         if dash.0.is_finished() {
             commands.entity(entity).remove::<ActiveDash>();
-            commands.entity(entity).remove::<ActiveCooldown>();
+            commands.entity(entity).remove::<HasDashCooldown>();
         }
     }
 }
