@@ -55,14 +55,12 @@ pub fn handle_dash_input(
     mut query: Query<(
         Entity,
         &mut DashCooldown,
-        &CursorRelCamPos,
-        Option<&ActiveCooldown>,
-        Option<&ActiveDash>
-    ), With<Player>>,
+        &CursorRelCamPos
+    ), (With<Player>,Without<ActiveCooldown>)>,
 ) {
-    for (entity, mut dash_cd, cursor_rel, on_cooldown, d_timer) in &mut query {
+    for (entity, mut dash_cd, cursor_rel,) in &mut query {
         // Only start dash if not already dashing
-        if d_timer.is_none() && kb_input.pressed(KeyCode::Space) && on_cooldown.is_none() {
+        if kb_input.pressed(KeyCode::Space) {
             let mut dash_vector = cursor_rel.0;
             if dash_vector.length() > DASH_LENGTH {
                 dash_vector = dash_vector.normalize() * DASH_LENGTH;
@@ -79,12 +77,15 @@ pub fn handle_dash_input(
 }
 
 pub fn apply_dash_velocity(
-    mut query: Query<(&mut Velocity, Option<&ActiveDash>), With<Player>>,
+    time: Res<Time>,
+    mut query: Query<(&mut Velocity, &mut ActiveDash), With<Player>>,
 ) {
-    for (mut velocity, d_timer) in &mut query {
-        if let Some(active_dash) = d_timer {
-            velocity.0 = active_dash.1 / DASH_DURATION; // constant velocity
-        }
+    for (mut velocity, mut active_dash) in &mut query {
+        // Update timer
+        active_dash.0.tick(time.delta());
+
+        // Apply constant dash velocity
+        velocity.0 = active_dash.1 / DASH_DURATION;
     }
 }
 
