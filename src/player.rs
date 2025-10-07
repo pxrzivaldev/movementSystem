@@ -65,6 +65,9 @@ pub fn handle_dash_input(
            && active_dash_opt.is_none()
         {
             let mut dash_vector = velocity.0;
+            if dash_vector.length_squared() == 0.0 {
+                continue; // skip dash entirely on ZERO velocity
+            }
             dash_vector = dash_vector.normalize() * DASH_LENGTH;
 
             commands.entity(entity).insert(ActiveDash(
