@@ -19,8 +19,8 @@ fn main() {
         .init_resource::<CursorWorldPos>()
         .add_systems(Startup, (setup_scene, setup_camera, setup_player))
         .add_systems(PreUpdate, clear_fixed_timestep_flag)
-        .add_systems(Update, get_cursorpos)
-        .add_systems(FixedPreUpdate, (set_fixed_time_step_flag, get_rel_cursorpos))
+        .add_systems(Update, get_cursor_pos)
+        .add_systems(FixedPreUpdate, (set_fixed_time_step_flag, get_rel_cursor))
         .add_systems(FixedUpdate, (advance_player_physics, update_dash_timer, update_dash_cooldown))
         .add_systems(
             RunFixedMainLoop,
@@ -43,7 +43,7 @@ fn main() {
         )
         .run();
 }
-
+ 
 fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -84,7 +84,7 @@ fn setup_player(
         Velocity::default(),
         PhysicalTranslation(Vec2::ZERO),
         PreviousPhysicalTranslation(Vec2::ZERO),
-        CursorRelCamPos(Vec2::ZERO),
+        CursorRel(Vec2::ZERO),
         DashCooldown(Timer::from_seconds(DASH_CD, TimerMode::Once)),
         Mesh2d(meshes.add(Circle::new(15.))),
         MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
@@ -140,10 +140,10 @@ fn update_camera(
 }
 
 #[derive(Component)]
-pub struct CursorRelCamPos(pub Vec2);
+pub struct CursorRel(pub Vec2);
 
 // Getting mouse inputs relative to world
-fn get_cursorpos(
+fn get_cursor_pos(
     windows: Query<&Window>,
     camera_q: Single<&Transform, With<Camera2d>>,
     mut cursor_res: ResMut<CursorWorldPos>,
@@ -165,14 +165,15 @@ fn get_cursorpos(
     }
 }
 
-fn get_rel_cursorpos(
+// Vector from Player to Cursor
+fn get_rel_cursor(
     cursor_res: Res<CursorWorldPos>,
-    cursor_rel: Single<&mut CursorRelCamPos>,
-    camera_q: Single<&Transform, With<Camera2d>>,
+    cursor_rel: Single<&mut CursorRel>,
+    player_q: Single<&Transform, With<Player>>,
 ){
-    let camera_transform = camera_q.into_inner();
+    let player_transform = player_q.into_inner();
     let mut rel = cursor_rel.into_inner();
 
     // Relative vector from camera to cursor
-    rel.0 = cursor_res.0 - camera_transform.translation.truncate();
+    rel.0 = cursor_res.0 - player_transform.translation.truncate();
 }

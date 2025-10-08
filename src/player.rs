@@ -4,7 +4,7 @@ const PLAYER_SPEED: f32 = 370.;
 pub const DASH_CD: f32 = 2.;
 const DASH_LENGTH: f32 = 800.;
 const DASH_DURATION: f32 = 0.2;
-
+ 
 #[derive(Component)]
 pub struct Player;
 
