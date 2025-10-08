@@ -1,5 +1,4 @@
-mod player;
-
+/*
 use bevy::prelude::*;
-use player::Player;
-
+use super::player::Player;
+*/

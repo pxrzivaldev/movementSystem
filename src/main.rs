@@ -1,11 +1,12 @@
-mod player;
+pub mod player;
+
 
 use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 //use components::Player;
-use player::{
-    Player, AccumulatedInput, Velocity, PhysicalTranslation, PreviousPhysicalTranslation, DashCooldown, DASH_CD,
-    handle_movement_input, handle_dash_input, apply_dash_velocity, advance_player_physics, interpolate_rendered_transform, update_dash_timer, update_dash_cooldown,
-};
+use player::player::{Player, setup_player};
+use player::player_movement::{advance_player_physics, handle_movement_input, clear_input, interpolate_rendered_transform};
+use player::player_dash::{update_dash_timer, update_dash_cooldown, handle_dash_input, apply_dash_velocity};
+
 // How quickly should the camera snap to the desired location.
 const CAMERA_DECAY_RATE: f32 = 5.;
 
@@ -73,25 +74,6 @@ fn setup_scene(
     }
 }
 
-fn setup_player(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-){
-    commands.spawn((
-        Player,
-        AccumulatedInput::default(),
-        Velocity::default(),
-        PhysicalTranslation(Vec2::ZERO),
-        PreviousPhysicalTranslation(Vec2::ZERO),
-        CursorRel(Vec2::ZERO),
-        DashCooldown(Timer::from_seconds(DASH_CD, TimerMode::Once)),
-        Mesh2d(meshes.add(Circle::new(15.))),
-        MeshMaterial2d(materials.add(Color::srgb(6.25, 9.4, 9.1))), // RGB values exceed 1 to achieve a bright color for the bloom effect
-        Transform::from_xyz(0., 0., 2.),
-    ));
-}
-
 fn setup_camera(mut commands: Commands) {
     commands.spawn((Camera2d, Bloom::NATURAL));
 }
@@ -119,9 +101,6 @@ fn did_fixed_timestep_run_this_frame(
     did_fixed_timestep_run_this_frame.0
 }
 
-fn clear_input(mut input: Single<&mut AccumulatedInput>) {
-    **input = AccumulatedInput::default();
-}
 
 // Update the camera position by tracking the player.
 fn update_camera(
