@@ -9,7 +9,7 @@ pub struct AccumulatedInput {
 }
 
 #[derive(Debug, Component, Clone, Copy, PartialEq, Default, Deref, DerefMut)]
-pub struct Velocity(pub Vec2);
+pub struct Input(pub Vec2);
 
 #[derive(Debug, Component, Clone, Copy, PartialEq, Default, Deref, DerefMut)]
 pub struct PhysicalTranslation(pub Vec2);
@@ -19,16 +19,16 @@ pub struct PreviousPhysicalTranslation(pub Vec2);
 
 pub fn handle_movement_input(
     kb_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut AccumulatedInput, &mut Velocity), With<Player>>,
+    mut query: Query<(&mut AccumulatedInput, &mut Input), With<Player>>,
 ) {
-    for (mut input, mut velocity) in &mut query {
-        input.movement = Vec2::ZERO;
-        if kb_input.pressed(KeyCode::KeyW) { input.movement.y += 1.0; }
-        if kb_input.pressed(KeyCode::KeyS) { input.movement.y -= 1.0; }
-        if kb_input.pressed(KeyCode::KeyA) { input.movement.x -= 1.0; }
-        if kb_input.pressed(KeyCode::KeyD) { input.movement.x += 1.0; }
+    for (mut accumulated, mut input) in &mut query {
+        accumulated.movement = Vec2::ZERO;
+        if kb_input.pressed(KeyCode::KeyW) { accumulated.movement.y += 1.0; }
+        if kb_input.pressed(KeyCode::KeyS) { accumulated.movement.y -= 1.0; }
+        if kb_input.pressed(KeyCode::KeyA) { accumulated.movement.x -= 1.0; }
+        if kb_input.pressed(KeyCode::KeyD) { accumulated.movement.x += 1.0; }
 
-        velocity.0 = input.movement.normalize_or_zero() * PLAYER_SPEED;
+        input.0 = accumulated.movement.normalize_or_zero();
     }
 }
 
@@ -38,11 +38,11 @@ pub fn clear_input(mut input: Single<&mut AccumulatedInput>) {
 
 pub fn advance_player_physics(
     fixed_time: Res<Time>,
-    mut query: Query<(&mut PhysicalTranslation, &mut PreviousPhysicalTranslation, &Velocity), With<Player>>,
+    mut query: Query<(&mut PhysicalTranslation, &mut PreviousPhysicalTranslation, &Input), With<Player>>,
 ) {
-    for (mut current, mut previous, velocity) in &mut query {
+    for (mut current, mut previous, input) in &mut query {
         previous.0 = current.0;
-        current.0 += velocity.0 * fixed_time.delta_secs();
+        current.0 += input.0 * PLAYER_SPEED * fixed_time.delta_secs();
     }
 }
 

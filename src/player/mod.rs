@@ -1,4 +1,5 @@
 pub mod player;
-pub mod player_movement;
-pub mod player_animations;
-pub mod player_dash;
+pub mod movement;
+pub mod animations;
+pub mod dash;
+pub mod blink;
