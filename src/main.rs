@@ -6,7 +6,7 @@ use bevy::{post_process::bloom::Bloom, window::Window, prelude::*};
 use player::player::{Player, setup_player};
 use player::movement::{advance_player_physics, handle_movement_input, clear_input, interpolate_rendered_transform};
 use player::dash::{update_dash_timer, update_dash_cooldown, handle_dash_input, apply_dash_velocity};
-use player::blink::{update_blink_cooldown, handle_blink_input, apply_blink};
+use player::blink::{update_blink_cooldown, handle_blink_input, apply_blink, camera_blink_snap};
 
 // How quickly should the camera snap to the desired location.
 const CAMERA_DECAY_RATE: f32 = 5.;
@@ -28,6 +28,7 @@ fn main() {
             update_dash_timer,
             update_dash_cooldown,
             apply_dash_velocity,
+            apply_blink,
             update_blink_cooldown,
         ))
         .add_systems(
@@ -42,8 +43,8 @@ fn main() {
                     .in_set(RunFixedMainLoopSystems::BeforeFixedMainLoop),
                 (
                     clear_input.run_if(did_fixed_timestep_run_this_frame),
-                    apply_blink,
                     interpolate_rendered_transform,
+                    camera_blink_snap,
                     update_camera,
                 )
                     .chain()

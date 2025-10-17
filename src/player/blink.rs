@@ -41,23 +41,26 @@ pub fn handle_blink_input(
 }
 
 pub fn apply_blink(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut PhysicalTranslation, &BlinkVector), (With<Player>, With<BlinkVector>)>,
+    mut query: Query<(&mut PhysicalTranslation, &mut BlinkVector), (With<Player>, With<BlinkVector>)>,
 ) {
-    for (entity, mut translation, blink_vector) in &mut query {
+    for (mut translation, blink_vector) in &mut query {
         if blink_vector.0 != Vec2::ZERO{
             translation.0 += blink_vector.0;
+            continue;
         }
-        commands.entity(entity).remove::<BlinkVector>();
     }
 }
 
 pub fn camera_blink_snap(
+    mut commands: Commands,
     mut camera: Single<&mut Transform, (With<Camera2d>, Without<Player>)>,
-    player: Single<&Transform, (With<Player>, With<BlinkVector>, Without<Camera2d>)>,
+    player: Query<(Entity, &BlinkVector), With<Player>>,
 ) {
-    let Vec3 { x, y, .. } = player.translation;
-    camera.translation = Vec3::new(x, y, camera.translation.z);
+    for (entity, blink_vector) in player{
+        let Vec2 { x, y} = blink_vector.0;
+        camera.translation += Vec3::new(x, y, 0.);
+        commands.entity(entity).remove::<BlinkVector>();
+    }
 }
 
 pub fn update_blink_cooldown(
